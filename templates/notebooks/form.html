@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if nb else 'Novo' }} Notebook — luizFabiano{% endblock %}
+{% block page_title %}{{ '✏️ Editar' if nb else '💻 Novo' }} Notebook{% endblock %}
+{% block topbar_actions %}<a href="/notebooks" class="btn btn-ghost btn-sm">← Voltar</a>{% endblock %}
+{% block content %}
+<div style="max-width:700px">
+<div class="card">
+  <form method="POST">
+    <div class="grid2">
+      <div class="fg">
+        <label class="label">Patrimônio *</label>
+        <input class="input" name="patrimonio" value="{{ nb.patrimonio if nb else '' }}" placeholder="NB-001" {{ 'readonly' if nb else '' }} required>
+      </div>
+      <div class="fg">
+        <label class="label">Serial</label>
+        <input class="input" name="serial" value="{{ nb.serial if nb else '' }}" placeholder="SN123456789">
+      </div>
+      <div class="fg">
+        <label class="label">Marca</label>
+        <input class="input" name="marca" value="{{ nb.marca if nb else '' }}" placeholder="Dell, Lenovo, HP...">
+      </div>
+      <div class="fg">
+        <label class="label">Modelo</label>
+        <input class="input" name="modelo" value="{{ nb.modelo if nb else '' }}" placeholder="Inspiron 15, ThinkPad...">
+      </div>
+      <div class="fg">
+        <label class="label">Processador</label>
+        <input class="input" name="processador" value="{{ nb.processador if nb else '' }}" placeholder="Intel i5-10ª, Ryzen 5...">
+      </div>
+      <div class="fg">
+        <label class="label">RAM</label>
+        <input class="input" name="ram" value="{{ nb.ram if nb else '' }}" placeholder="8GB, 16GB...">
+      </div>
+      <div class="fg">
+        <label class="label">Armazenamento</label>
+        <input class="input" name="armazenamento" value="{{ nb.armazenamento if nb else '' }}" placeholder="256GB SSD, 1TB HDD...">
+      </div>
+      <div class="fg">
+        <label class="label">Ano</label>
+        <input class="input" type="number" name="ano" value="{{ nb.ano if nb else '' }}" placeholder="2022" min="2000" max="2030">
+      </div>
+      <div class="fg">
+        <label class="label">Condição</label>
+        <select class="select" name="condicao">
+          {% for v,l in [('bom','Bom'),('regular','Regular'),('ruim','Ruim')] %}
+          <option value="{{ v }}" {{ 'selected' if nb and nb.condicao==v }}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label class="label">Localização</label>
+        <input class="input" name="localizacao" value="{{ nb.localizacao if nb else 'laboratorio' }}" placeholder="Laboratório, Sala A...">
+      </div>
+      <div class="fg" style="grid-column:1/-1">
+        <label class="label">Observações</label>
+        <textarea class="textarea" name="observacoes">{{ nb.observacoes if nb else '' }}</textarea>
+      </div>
+    </div>
+    <div class="flex gap8">
+      <button class="btn btn-primary" type="submit">{{ '💾 Salvar' if nb else '✅ Cadastrar + QR Code' }}</button>
+      <a href="/notebooks" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}

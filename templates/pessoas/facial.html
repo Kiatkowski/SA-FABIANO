@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Reconhecimento Facial — {{ pessoa.nome }}{% endblock %}
+{% block page_title %}🎭 Cadastro Facial — {{ pessoa.nome }}{% endblock %}
+{% block topbar_actions %}<a href="/pessoas/{{ pessoa.id }}" class="btn btn-ghost btn-sm">← Voltar</a>{% endblock %}
+{% block extra_css %}
+<style>
+.facial-container{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+.cam-box{background:var(--bg3);border:2px solid var(--border);border-radius:14px;overflow:hidden;position:relative;aspect-ratio:4/3}
+.cam-box video{width:100%;height:100%;object-fit:cover;display:block}
+.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.face-guide{width:200px;height:200px;border:3px dashed rgba(0,212,255,.5);border-radius:50%}
+.face-guide.detected{border-color:var(--success);border-style:solid;animation:glow .5s ease}
+@keyframes glow{0%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}100%{box-shadow:0 0 0 12px rgba(0,229,160,0)}}
+.capture-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}
+.thumb{aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid var(--border);position:relative}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb .ok{position:absolute;top:3px;right:3px;font-size:14px}
+.progress-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin:10px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--success));border-radius:4px;transition:width .3s}
+.steps{display:flex;flex-direction:column;gap:10px}
+.step{display:flex;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);transition:.2s}
+.step.active{border-color:var(--primary);background:var(--pdim)}
+.step.done{border-color:var(--success);background:var(--sdim)}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.step.active .step-num{background:var(--primary);color:var(--bg)}
+.step.done .step-num{background:var(--success);color:var(--bg)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="facial-container">
+  <!-- Câmera -->
+  <div>
+    <div class="cam-box" id="cam-box">
+      <video id="video" autoplay muted playsinline></video>
+      <div class="cam-overlay">
+        <div class="face-guide" id="face-guide"></div>
+      </div>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px" id="prog-lbl">0/5 capturas realizadas</div>
+
+    <div class="capture-strip" id="strip">
+      {% for i in range(5) %}<div class="thumb" id="thumb{{ i }}" style="background:var(--bg3)"></div>{% endfor %}
+    </div>
+
+    <div class="flex gap8" style="margin-top:14px">
+      <button class="btn btn-primary" id="btn-start" onclick="startCamera()">📷 Iniciar Câmera</button>
+      <button class="btn btn-success" id="btn-save" onclick="saveAll()" disabled style="display:none">✅ Salvar Rosto</button>
+      <button class="btn btn-ghost" id="btn-reset" onclick="resetAll()" style="display:none">🔄 Recapturar</button>
+    </div>
+
+    <div id="msg-box" style="margin-top:12px;font-size:13px;color:var(--text2);padding:10px 12px;background:var(--bg3);border-radius:8px;display:none"></div>
+  </div>
+
+  <!-- Instruções -->
+  <div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">👤 {{ pessoa.nome }}</div>
+      <div style="font-size:13px;color:var(--text2)">
+        <div>🎓 <strong>Matrícula:</strong> {{ pessoa.matricula }}</div>
+        <div>📚 <strong>Turma:</strong> {{ pessoa.turma or '—' }}</div>
+        {% if pessoa.face_encoding %}
+        <div style="margin-top:8px;padding:8px 10px;background:var(--sdim);border-radius:8px;color:var(--success)">
+          ✅ Rosto já cadastrado — recapture para atualizar
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Como cadastrar o rosto</div>
+      <div class="steps">
+        <div class="step active" id="step1">
+          <div class="step-num">1</div>
+          <div><strong>Posicione o rosto</strong><div style="font-size:12px;color:var(--text2)">Centralize no círculo guia. Boa iluminação.</div></div>
+        </div>
+        <div class="step" id="step2">
+          <div class="step-num">2</div>
+          <div><strong>Capture 5 ângulos</strong><div style="font-size:12px;color:var(--text2)">Frente, esquerda, direita, acima, abaixo.</div></div>
+        </div>
+        <div class="step" id="step3">
+          <div class="step-num">3</div>
+          <div><strong>Salve o perfil</strong><div style="font-size:12px;color:var(--text2)">Clique em Salvar para registrar no sistema.</div></div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:10px 12px;background:var(--pdim);border-radius:8px;font-size:12px;color:var(--primary)">
+        💡 O sistema captura automaticamente a cada 1,5s quando um rosto é detectado.
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="canvas" style="display:none"></canvas>
+{% endblock %}
+{% block extra_js %}
+<script>
+let stream = null, captures = [], capturing = false, captureInterval = null;
+const NEEDED = 5;
+const PESSOA_ID = "{{ pessoa.id }}";
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
+    document.getElementById('video').srcObject = stream;
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-reset').style.display = 'flex';
+    capturing = true;
+    captureInterval = setInterval(autoCapture, 1500);
+    showMsg('📷 Câmera ativa — posicione o rosto no círculo.');
+    document.getElementById('step1').className = 'step done';
+    document.getElementById('step2').className = 'step active';
+  } catch(e) {
+    showMsg('❌ Erro ao acessar câmera: ' + e.message, true);
+  }
+}
+
+function autoCapture() {
+  if (!capturing || captures.length >= NEEDED) return;
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const img = canvas.toDataURL('image/jpeg', 0.85);
+  captures.push(img);
+
+  // Mostra thumb
+  const t = document.getElementById('thumb' + (captures.length - 1));
+  t.innerHTML = '<img src="' + img + '"><span class="ok">✅</span>';
+
+  // Atualiza progresso
+  const pct = Math.round(captures.length / NEEDED * 100);
+  document.getElementById('prog').style.width = pct + '%';
+  document.getElementById('prog-lbl').textContent = captures.length + '/' + NEEDED + ' capturas realizadas';
+  document.getElementById('face-guide').className = 'face-guide detected';
+
+  if (captures.length >= NEEDED) {
+    clearInterval(captureInterval);
+    capturing = false;
+    document.getElementById('btn-save').style.display = 'flex';
+    document.getElementById('btn-save').disabled = false;
+    document.getElementById('step2').className = 'step done';
+    document.getElementById('step3').className = 'step active';
+    showMsg('✅ ' + NEEDED + ' capturas realizadas! Clique em Salvar Rosto.');
+    if (stream) { stream.getTracks().forEach(t => t.stop()); }
+  }
+}
+
+async function saveAll() {
+  if (captures.length < NEEDED) { showMsg('Capture ' + NEEDED + ' fotos primeiro.', true); return; }
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  // Usa a melhor captura (a do meio)
+  const bestImg = captures[Math.floor(captures.length / 2)];
+  try {
+    const r = await fetch('/api/cadastrar_facial', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pessoa_id: PESSOA_ID, imagem: bestImg})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showMsg('🎉 ' + d.msg);
+      document.getElementById('step3').className = 'step done';
+      btn.textContent = '✅ Salvo!';
+      setTimeout(() => window.location.href = '/pessoas/' + PESSOA_ID, 2000);
+    } else {
+      showMsg('❌ ' + d.msg, true);
+      btn.disabled = false; btn.textContent = '✅ Salvar Rosto';
+    }
+  } catch(e) {
+    showMsg('❌ Erro de conexão.', true);
+    btn.disabled = false; btn.textContent = '✅ Salvar Rosto';
+  }
+}
+
+function resetAll() {
+  captures = [];
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  for (let i = 0; i < NEEDED; i++) document.getElementById('thumb' + i).innerHTML = '';
+  document.getElementById('prog').style.width = '0%';
+  document.getElementById('prog-lbl').textContent = '0/' + NEEDED + ' capturas realizadas';
+  document.getElementById('btn-start').style.display = 'flex';
+  document.getElementById('btn-save').style.display = 'none';
+  document.getElementById('face-guide').className = 'face-guide';
+  ['step1','step2','step3'].forEach((s,i) => document.getElementById(s).className = 'step' + (i===0?' active':''));
+  showMsg('🔄 Reiniciado. Clique em Iniciar Câmera.');
+}
+
+function showMsg(msg, err=false) {
+  const b = document.getElementById('msg-box');
+  b.style.display = 'block';
+  b.style.color = err ? 'var(--danger)' : 'var(--success)';
+  b.textContent = msg;
+}
+</script>
+{% endblock %}

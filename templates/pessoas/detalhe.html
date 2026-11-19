@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ pessoa.nome }} — luizFabiano{% endblock %}
+{% block page_title %}👤 {{ pessoa.nome }}{% endblock %}
+{% block topbar_actions %}
+  <a href="/pessoas/{{ pessoa.id }}/editar" class="btn btn-outline btn-sm">✏️ Editar</a>
+  <a href="/pessoas/{{ pessoa.id }}/facial" class="btn btn-primary btn-sm">🎭 Cadastrar Rosto</a>
+{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start">
+<div>
+  <div class="card" style="text-align:center">
+    {% if pessoa.foto_path %}
+    <img src="/{{ pessoa.foto_path }}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);margin:0 auto 12px;display:block">
+    {% else %}
+    <div style="width:100px;height:100px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 12px">👤</div>
+    {% endif %}
+    <div style="font-size:16px;font-weight:600">{{ pessoa.nome }}</div>
+    <div style="font-family:monospace;color:var(--primary);margin:4px 0">{{ pessoa.matricula }}</div>
+    <span class="badge badge-{{ pessoa.nivel_acesso }}">{{ pessoa.nivel_acesso }}</span>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      {% if pessoa.face_encoding %}<div style="color:var(--success);font-size:13px">✅ Rosto cadastrado</div>
+      {% else %}<div style="color:var(--warn);font-size:13px">⚠️ Sem reconhecimento facial</div>{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    {% for lbl,val in [('Turma',pessoa.turma or '—'),('Curso',pessoa.curso or '—'),('Email',pessoa.email or '—'),('Telefone',pessoa.telefone or '—'),('Cadastrado em',(pessoa.criado_em or '')[:10])] %}
+    <div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <div class="label">{{ lbl }}</div><span>{{ val }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<div>
+  <div class="card">
+    <div class="card-title">📋 Histórico de Empréstimos ({{ historico|length }})</div>
+    {% if historico %}
+    <table class="table">
+      <thead><tr><th>Notebook</th><th>Retirada</th><th>Devolução</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for e in historico %}
+      <tr>
+        <td><strong style="color:var(--primary)">{{ e.patrimonio }}</strong><div style="font-size:11px;color:var(--text3)">{{ e.marca }} {{ e.modelo }}</div></td>
+        <td style="font-size:12px;color:var(--text2)">{{ e.retirada_em[:16] }}</td>
+        <td style="font-size:12px;color:var(--text2)">{{ e.devolucao_em[:16] if e.devolucao_em else '—' }}</td>
+        <td><span class="badge badge-{{ e.status }}">{{ e.status }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><p>Nenhum empréstimo registrado</p></div>
+    {% endif %}
+  </div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ nb.patrimonio }} — luizFabiano{% endblock %}
+{% block page_title %}💻 {{ nb.patrimonio }}{% endblock %}
+{% block topbar_actions %}
+  <a href="/notebooks/{{ nb.id }}/editar" class="btn btn-outline btn-sm">✏️ Editar</a>
+  <a href="/notebooks/{{ nb.id }}/qrcode" class="btn btn-primary btn-sm">📥 Download QR</a>
+  <form method="POST" action="/notebooks/{{ nb.id }}/desativar" onsubmit="return confirm('Desativar este notebook?')" style="display:inline">
+    <button class="btn btn-danger btn-sm">🗑️ Desativar</button>
+  </form>
+{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start">
+<div>
+  <div class="card">
+    <div class="grid2">
+      {% for lbl,val in [('Patrimônio',nb.patrimonio),('Serial',nb.serial or '—'),('Marca',nb.marca or '—'),('Modelo',nb.modelo or '—'),('Processador',nb.processador or '—'),('RAM',nb.ram or '—'),('Armazenamento',nb.armazenamento or '—'),('Ano',nb.ano or '—'),('Localização',nb.localizacao or '—'),('Cadastrado em',nb.criado_em[:16] if nb.criado_em else '—')] %}
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">
+        <div class="label">{{ lbl }}</div><strong>{{ val }}</strong>
+      </div>
+      {% endfor %}
+      <div style="padding:6px 0">
+        <div class="label">Condição</div><span class="badge badge-{{ nb.condicao }}">{{ nb.condicao }}</span>
+      </div>
+      <div style="padding:6px 0">
+        <div class="label">Status</div><span class="badge badge-{{ nb.status }}">{{ nb.status }}</span>
+      </div>
+    </div>
+    {% if nb.observacoes %}
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div class="label">Observações</div>
+      <p style="color:var(--text2);font-size:13px;line-height:1.6">{{ nb.observacoes }}</p>
+    </div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Histórico de Empréstimos ({{ historico|length }})</div>
+    {% if historico %}
+    <table class="table">
+      <thead><tr><th>Pessoa</th><th>Matrícula</th><th>Retirada</th><th>Devolução</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for e in historico %}
+      <tr>
+        <td>{{ e.pessoa_nome }}</td>
+        <td style="font-family:monospace;font-size:12px">{{ e.matricula }}</td>
+        <td style="font-size:12px;color:var(--text2)">{{ e.retirada_em[:16] }}</td>
+        <td style="font-size:12px;color:var(--text2)">{{ e.devolucao_em[:16] if e.devolucao_em else '—' }}</td>
+        <td><span class="badge badge-{{ e.status }}">{{ e.status }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><p>Sem histórico de empréstimos</p></div>
+    {% endif %}
+  </div>
+</div>
+<div>
+  <div class="card" style="text-align:center">
+    <div class="card-title" style="justify-content:center">📱 QR Code</div>
+    <img src="data:image/png;base64,{{ qr_b64 }}" style="width:100%;max-width:240px;border-radius:8px;border:1px solid var(--border)">
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:monospace">{{ nb.patrimonio }}</div>
+    <a href="/notebooks/{{ nb.id }}/qrcode" class="btn btn-outline btn-sm" style="margin-top:12px;display:inline-flex">📥 Download PNG</a>
+  </div>
+  {% if nb.status == 'emprestado' %}
+  <div class="card" style="border-color:rgba(255,184,0,.3);background:rgba(255,184,0,.05)">
+    <div class="card-title" style="color:var(--warn)">⚠️ Em Uso</div>
+    <p style="font-size:13px;color:var(--text2)">Este notebook está emprestado. Registre a devolução na aba Empréstimos.</p>
+    <a href="/emprestimos?status=ativo" class="btn btn-warning btn-sm" style="margin-top:10px">Ver empréstimo ativo</a>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

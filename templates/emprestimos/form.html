@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Novo Empréstimo — luizFabiano{% endblock %}
+{% block page_title %}📤 Novo Empréstimo{% endblock %}
+{% block topbar_actions %}<a href="/emprestimos" class="btn btn-ghost btn-sm">← Voltar</a>{% endblock %}
+{% block content %}
+<div style="max-width:600px">
+<div class="card">
+  <form method="POST">
+    <div class="fg">
+      <label class="label">Notebook * (apenas disponíveis)</label>
+      <select class="select" name="notebook_id" required>
+        <option value="">Selecione o notebook...</option>
+        {% for nb in notebooks %}
+        <option value="{{ nb.id }}">{{ nb.patrimonio }} — {{ nb.marca }} {{ nb.modelo }} {% if nb.processador %}({{ nb.processador }}){% endif %}</option>
+        {% endfor %}
+      </select>
+      {% if not notebooks %}<div style="font-size:12px;color:var(--warn);margin-top:5px">⚠️ Nenhum notebook disponível no momento.</div>{% endif %}
+    </div>
+    <div class="fg">
+      <label class="label">Pessoa *</label>
+      <input class="input" id="pessoa-search" placeholder="🔍 Digite nome ou matrícula..." oninput="filterPessoas(this.value)">
+      <select class="select" name="pessoa_id" id="pessoa-select" required style="margin-top:6px">
+        <option value="">Selecione a pessoa...</option>
+        {% for p in pessoas %}
+        <option value="{{ p.id }}" data-search="{{ p.nome|lower }} {{ p.matricula }}">{{ p.nome }} — {{ p.matricula }} {% if p.turma %}({{ p.turma }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fg">
+      <label class="label">Prazo de devolução (horas)</label>
+      <input class="input" type="number" name="horas" value="4" min="1" max="72" style="max-width:150px">
+    </div>
+    <div class="fg">
+      <label class="label">Observações</label>
+      <textarea class="textarea" name="observacoes" placeholder="Observações opcionais..."></textarea>
+    </div>
+    <div class="flex gap8">
+      <button class="btn btn-primary" type="submit" {% if not notebooks %}disabled{% endif %}>📤 Registrar Empréstimo</button>
+      <a href="/emprestimos" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function filterPessoas(q) {
+  const opts = document.getElementById('pessoa-select').options;
+  q = q.toLowerCase();
+  for (let i = 1; i < opts.length; i++) {
+    const search = opts[i].getAttribute('data-search') || '';
+    opts[i].style.display = (!q || search.includes(q)) ? '' : 'none';
+  }
+}
+</script>
+{% endblock %}

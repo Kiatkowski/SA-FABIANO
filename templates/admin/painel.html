@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Administração — luizFabiano{% endblock %}
+{% block page_title %}⚙️ Administração do Sistema{% endblock %}
+{% block topbar_actions %}<a href="/admin/novo" class="btn btn-primary btn-sm">➕ Novo Admin</a>{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+<!-- Admins -->
+<div class="card">
+  <div class="card-title">👤 Administradores</div>
+  <table class="table">
+    <thead><tr><th>Nome</th><th>Email</th><th>Nível</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for a in admins %}
+    <tr>
+      <td style="font-weight:500">{{ a.nome }}</td>
+      <td style="font-size:12px;color:var(--text2)">{{ a.email }}</td>
+      <td><span class="badge {{ 'badge-admin' if a.nivel==2 else 'badge-aluno' }}">NV.{{ a.nivel }}</span></td>
+      <td><span class="badge {{ 'badge-disponivel' if a.ativo else 'badge-atrasado' }}">{{ 'Ativo' if a.ativo else 'Inativo' }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<!-- Configurações -->
+<div class="card">
+  <div class="card-title">⚙️ Configurações do Sistema</div>
+  <form method="POST" action="/admin/config">
+    {% for c in configs %}
+    <div class="fg">
+      <label class="label">{{ c.descricao or c.chave }}</label>
+      <input class="input" name="cfg_{{ c.chave }}" value="{{ c.valor or '' }}" style="font-size:13px">
+    </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">💾 Salvar Configurações</button>
+  </form>
+</div>
+</div>
+<!-- Info do sistema -->
+<div class="card" style="margin-top:4px;border-color:rgba(0,212,255,.2)">
+  <div class="card-title">ℹ️ Informações do Sistema</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;font-size:13px">
+    {% for lbl,val in [('Sistema','luizFabiano v1.0'),('Backend','Flask + SQLite'),('Facial','OpenCV Haar Cascade'),('QR Code','PIL (Python Imaging)'),('Telegram','Bot API'),('Arduino','REST API ESP32')] %}
+    <div style="padding:10px 12px;background:var(--bg3);border-radius:8px">
+      <div class="label">{{ lbl }}</div><strong>{{ val }}</strong>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

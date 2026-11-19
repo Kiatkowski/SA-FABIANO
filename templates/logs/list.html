@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Logs — luizFabiano{% endblock %}
+{% block page_title %}📝 Logs do Sistema{% endblock %}
+{% block content %}
+<div class="card" style="padding:12px 14px;margin-bottom:14px">
+  <form method="GET" class="flex gap8 items-center flex-wrap">
+    <select class="select" name="tipo" style="width:200px">
+      <option value="">Todos os tipos</option>
+      {% for t in tipos %}<option value="{{ t }}" {{ 'selected' if tipo==t }}>{{ t }}</option>{% endfor %}
+    </select>
+    <input class="input" type="date" name="data" value="{{ data }}" style="width:180px">
+    <button class="btn btn-outline btn-sm" type="submit">🔍 Filtrar</button>
+    <a href="/logs" class="btn btn-ghost btn-sm">Limpar</a>
+    <span style="color:var(--text3);font-size:12px;margin-left:auto">{{ total }} registro(s)</span>
+  </form>
+</div>
+<div class="card">
+  {% if logs %}
+  <table class="table">
+    <thead><tr><th>Tipo</th><th>Descrição</th><th>Pessoa</th><th>Admin</th><th>IP</th><th>Data/Hora</th></tr></thead>
+    <tbody>
+    {% for l in logs %}
+    <tr>
+      <td><span class="badge badge-{{ 'aluno' if 'retirada' in l.tipo else ('danger' if 'alarme' in l.tipo else 'devolvido') }}" style="font-size:10px">{{ l.tipo }}</span></td>
+      <td style="font-size:13px">{{ l.descricao or '—' }}</td>
+      <td style="font-size:12px;color:var(--text2)">{{ l.pessoa_nome or '—' }}</td>
+      <td style="font-size:12px;color:var(--text2)">{{ l.admin_nome or '—' }}</td>
+      <td style="font-size:11px;font-family:monospace;color:var(--text3)">{{ l.ip or '—' }}</td>
+      <td style="font-size:12px;color:var(--text3)">{{ l.criado_em[:16] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if pages > 1 %}
+  <div class="flex gap8 items-center" style="margin-top:14px;justify-content:center">
+    {% if page>1 %}<a href="?tipo={{ tipo }}&data={{ data }}&page={{ page-1 }}" class="btn btn-outline btn-sm">← Anterior</a>{% endif %}
+    <span style="color:var(--text2);font-size:13px">{{ page }}/{{ pages }}</span>
+    {% if page<pages %}<a href="?tipo={{ tipo }}&data={{ data }}&page={{ page+1 }}" class="btn btn-outline btn-sm">Próxima →</a>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty"><div class="empty-ico">📝</div><p>Nenhum log encontrado</p></div>
+  {% endif %}
+</div>
+{% endblock %}

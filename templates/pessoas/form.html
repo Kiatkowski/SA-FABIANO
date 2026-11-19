@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if pessoa else 'Nova' }} Pessoa — luizFabiano{% endblock %}
+{% block page_title %}{{ '✏️ Editar' if pessoa else '👤 Nova' }} Pessoa{% endblock %}
+{% block topbar_actions %}<a href="/pessoas" class="btn btn-ghost btn-sm">← Voltar</a>{% endblock %}
+{% block content %}
+<div style="max-width:660px">
+<div class="card">
+  <form method="POST">
+    <div class="grid2">
+      <div class="fg" style="grid-column:1/-1">
+        <label class="label">Nome completo *</label>
+        <input class="input" name="nome" value="{{ pessoa.nome if pessoa else '' }}" placeholder="João da Silva" required>
+      </div>
+      <div class="fg">
+        <label class="label">Matrícula *</label>
+        <input class="input" name="matricula" value="{{ pessoa.matricula if pessoa else '' }}" placeholder="2024001" {{ 'readonly' if pessoa else '' }} required>
+      </div>
+      <div class="fg">
+        <label class="label">Nível de Acesso</label>
+        <select class="select" name="nivel_acesso">
+          {% for v,l in [('aluno','Aluno'),('professor','Professor'),('tecnico','Técnico'),('admin','Admin')] %}
+          <option value="{{ v }}" {{ 'selected' if pessoa and pessoa.nivel_acesso==v }}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label class="label">Turma</label>
+        <input class="input" name="turma" value="{{ pessoa.turma if pessoa else '' }}" placeholder="INF-3A, TI-2B...">
+      </div>
+      <div class="fg">
+        <label class="label">Curso</label>
+        <input class="input" name="curso" value="{{ pessoa.curso if pessoa else '' }}" placeholder="Informática, ADS...">
+      </div>
+      <div class="fg">
+        <label class="label">Email</label>
+        <input class="input" type="email" name="email" value="{{ pessoa.email if pessoa else '' }}" placeholder="joao@escola.edu.br">
+      </div>
+      <div class="fg">
+        <label class="label">Telefone</label>
+        <input class="input" name="telefone" value="{{ pessoa.telefone if pessoa else '' }}" placeholder="(47) 99999-0000">
+      </div>
+    </div>
+    <div class="flex gap8">
+      <button class="btn btn-primary" type="submit">{{ '💾 Salvar' if pessoa else '✅ Cadastrar' }}</button>
+      <a href="/pessoas" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% if pessoa %}
+<div class="card" style="margin-top:0">
+  <div class="card-title">⚡ Ações</div>
+  <div class="flex gap8 flex-wrap">
+    <a href="/pessoas/{{ pessoa.id }}" class="btn btn-outline btn-sm">👁 Ver detalhes</a>
+    <a href="/pessoas/{{ pessoa.id }}/facial" class="btn btn-primary btn-sm">🎭 Cadastrar Rosto</a>
+    <form method="POST" action="/pessoas/{{ pessoa.id }}/desativar" onsubmit="return confirm('Desativar?')" style="display:inline">
+      <button class="btn btn-danger btn-sm">🗑️ Desativar</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+</div>
+{% endblock %}

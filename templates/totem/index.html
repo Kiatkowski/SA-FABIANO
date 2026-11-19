@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>luizFabiano — Totem</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0A1628;color:#E2F0FF;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.totem{width:100%;max-width:600px;text-align:center}
+.logo{font-size:24px;font-weight:700;margin-bottom:4px}.logo span{color:#00D4FF}
+.sub{font-size:13px;color:#7FA8CC;margin-bottom:28px}
+.tabs{display:flex;gap:4px;background:#0F1F3D;border-radius:12px;padding:4px;margin-bottom:20px}
+.tab{flex:1;padding:10px;border-radius:9px;cursor:pointer;font-size:14px;font-weight:500;transition:.15s;color:#7FA8CC;text-align:center}
+.tab.active{background:#1A3050;color:#00D4FF}
+.panel{display:none;background:#1A3050;border:1px solid rgba(0,212,255,.15);border-radius:14px;padding:22px}
+.panel.active{display:block}
+/* Câmera */
+.cam{background:#0F1F3D;border:2px solid rgba(0,212,255,.2);border-radius:12px;overflow:hidden;position:relative;width:100%;aspect-ratio:4/3}
+.cam video{width:100%;height:100%;object-fit:cover}
+.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.face-circle{width:180px;height:180px;border:3px dashed rgba(0,212,255,.6);border-radius:50%}
+.face-circle.ok{border-color:#00E5A0;border-style:solid}
+/* QR Input */
+.qr-input{width:100%;padding:14px;background:#0F1F3D;border:2px solid rgba(0,212,255,.2);border-radius:10px;color:#E2F0FF;font-size:16px;text-align:center;font-family:monospace;letter-spacing:2px;outline:none}
+.qr-input:focus{border-color:#00D4FF}
+/* Resultado */
+.result{padding:16px;border-radius:10px;font-size:15px;font-weight:500;margin-top:14px;display:none}
+.result.ok{background:rgba(0,229,160,.12);color:#00E5A0;border:1px solid rgba(0,229,160,.3)}
+.result.err{background:rgba(255,76,106,.12);color:#FF4C6A;border:1px solid rgba(255,76,106,.3)}
+/* Pessoa identificada */
+.id-card{background:#0F1F3D;border:2px solid rgba(0,212,255,.25);border-radius:12px;padding:14px;margin:12px 0;text-align:left;display:none}
+.btn{width:100%;padding:12px;background:#00D4FF;color:#0A1628;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;margin-top:10px}
+.btn:hover{background:#00bfe6}
+.btn-outline{background:transparent;color:#E2F0FF;border:1px solid rgba(0,212,255,.3)}
+.status-bar{margin-top:20px;font-size:12px;color:#7FA8CC;display:flex;gap:16px;justify-content:center}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="totem">
+  <div class="logo">luiz<span>Fabiano</span></div>
+  <div class="sub">Sistema Inteligente de Controle de Notebooks<br>💻 {{ disp }} notebook(s) disponível(is)</div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('facial')">🎭 Reconhecimento Facial</div>
+    <div class="tab" onclick="switchTab('qr')">📱 QR Code</div>
+    <div class="tab" onclick="switchTab('manual')">🔑 Matrícula</div>
+  </div>
+
+  <!-- Painel Facial -->
+  <div class="panel active" id="panel-facial">
+    <div class="cam" id="cam-box">
+      <video id="video" autoplay muted playsinline></video>
+      <div class="cam-overlay"><div class="face-circle" id="fc"></div></div>
+    </div>
+    <div id="facial-pessoa" class="id-card"></div>
+    <button class="btn" id="btn-cam" onclick="startCam()">📷 Iniciar Câmera</button>
+    <div id="facial-msg" style="margin-top:10px;font-size:13px;color:#7FA8CC">Clique para ativar a câmera</div>
+  </div>
+
+  <!-- Painel QR -->
+  <div class="panel" id="panel-qr">
+    <p style="color:#7FA8CC;font-size:13px;margin-bottom:12px">Escaneie o QR Code do notebook com o celular ou insira os dados abaixo:</p>
+    <input class="qr-input" id="qr-input" placeholder="Aguardando leitura..." autofocus>
+    <button class="btn" onclick="processQR()">✅ Processar QR Code</button>
+    <div id="qr-result" class="result"></div>
+  </div>
+
+  <!-- Painel Manual -->
+  <div class="panel" id="panel-manual">
+    <p style="color:#7FA8CC;font-size:13px;margin-bottom:12px">Digite sua matrícula para se identificar:</p>
+    <input class="qr-input" id="mat-input" placeholder="Ex: 2024001" maxlength="20">
+    <button class="btn" onclick="identManual()">🔍 Identificar</button>
+    <div id="mat-pessoa" class="id-card"></div>
+    <div id="mat-result" class="result"></div>
+    <!-- Depois de identificado: campo QR -->
+    <div id="mat-qr-row" style="display:none;margin-top:14px">
+      <p style="color:#7FA8CC;font-size:13px;margin-bottom:8px">Agora escaneie o QR do notebook:</p>
+      <input class="qr-input" id="mat-qr-input" placeholder="QR do notebook">
+      <button class="btn" onclick="processQRManual()">📤 Confirmar Operação</button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span><span class="dot" id="s-porta" style="background:#7FA8CC"></span>Porta</span>
+    <span><span class="dot" id="s-alarme" style="background:#7FA8CC"></span>Alarme</span>
+    <span id="s-disp">💻 {{ disp }} disp.</span>
+  </div>
+</div>
+
+<script>
+let currentPessoaId = null;
+let camStream = null;
+let reconhecendo = false;
+
+// Tabs
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const n = ['facial','qr','manual'][i];
+    t.className = 'tab' + (n===name ? ' active':'');
+  });
+  document.querySelectorAll('.panel').forEach((p,i) => {
+    const n = ['facial','qr','manual'][i];
+    p.className = 'panel' + (n===name ? ' active':'');
+  });
+  if (name==='facial') startCam();
+  else stopCam();
+}
+
+// Câmera + reconhecimento
+async function startCam() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
+    document.getElementById('video').srcObject = camStream;
+    document.getElementById('btn-cam').style.display = 'none';
+    document.getElementById('facial-msg').textContent = '🔍 Procurando rosto...';
+    reconhecendo = true;
+    setTimeout(reconhecerLoop, 2000);
+  } catch(e) {
+    document.getElementById('facial-msg').textContent = '❌ Câmera indisponível: ' + e.message;
+  }
+}
+
+function stopCam() {
+  reconhecendo = false;
+  if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+}
+
+async function reconhecerLoop() {
+  if (!reconhecendo) return;
+  try {
+    const video = document.getElementById('video');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth||640; canvas.height = video.videoHeight||480;
+    canvas.getContext('2d').drawImage(video,0,0);
+    const img = canvas.toDataURL('image/jpeg',0.8);
+    const r = await fetch('/api/reconhecer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imagem:img})});
+    const d = await r.json();
+    if (d.ok && d.reconhecido) {
+      currentPessoaId = d.pessoa_id;
+      document.getElementById('fc').className = 'face-circle ok';
+      document.getElementById('facial-msg').textContent = '';
+      document.getElementById('facial-pessoa').style.display = 'block';
+      document.getElementById('facial-pessoa').innerHTML = `
+        <div style="font-size:12px;color:#7FA8CC">✅ Identificado (${d.confianca}%)</div>
+        <div style="font-size:18px;font-weight:700;margin:6px 0">${d.nome}</div>
+        <div style="font-size:13px;color:#00D4FF">Matrícula: ${d.matricula}</div>
+        <div style="font-size:12px;color:#7FA8CC">Turma: ${d.turma||'—'}</div>
+        <button class="btn" onclick="mostrarQRInput()">📱 Escanear Notebook</button>
+        <input class="qr-input" id="facial-qr" placeholder="QR do notebook" style="margin-top:8px;display:none">
+        <button class="btn btn-outline" id="btn-facial-qr" onclick="processarFacialQR()" style="display:none">📤 Confirmar</button>
+      `;
+      reconhecendo = false;
+    } else {
+      document.getElementById('fc').className = 'face-circle';
+      document.getElementById('facial-msg').textContent = `🔍 Buscando... (${d.confianca||0}%)`;
+      setTimeout(reconhecerLoop, 2000);
+    }
+  } catch(e) { setTimeout(reconhecerLoop, 3000); }
+}
+
+function mostrarQRInput() {
+  document.getElementById('facial-qr').style.display='block';
+  document.getElementById('btn-facial-qr').style.display='block';
+  document.getElementById('facial-qr').focus();
+}
+
+async function processarFacialQR() {
+  const qr = document.getElementById('facial-qr').value.trim();
+  if (!qr) return;
+  await processarOperacao(qr, currentPessoaId, document.getElementById('facial-pessoa'));
+}
+
+// QR direto
+async function processQR() {
+  const qr = document.getElementById('qr-input').value.trim();
+  if (!qr) return;
+  await processarOperacao(qr, currentPessoaId, document.getElementById('qr-result'));
+}
+
+// Manual
+async function identManual() {
+  const mat = document.getElementById('mat-input').value.trim();
+  if (!mat) return;
+  // Busca pessoa pela matrícula via API de reconhecimento
+  const r = document.getElementById('mat-result');
+  r.style.display='block'; r.className='result ok'; r.textContent='🔍 Buscando...';
+  try {
+    const res = await fetch('/api/status');
+    // Usamos lookup simples
+    r.className='result ok'; r.textContent='✅ Digite o QR do notebook abaixo.';
+    document.getElementById('mat-qr-row').style.display='block';
+    currentPessoaId = 'manual_' + mat; // placeholder; backend vai buscar
+    document.getElementById('mat-pessoa').style.display='block';
+    document.getElementById('mat-pessoa').innerHTML = `<div style="color:#7FA8CC;font-size:13px">Matrícula:</div><div style="font-size:18px;font-weight:700">${mat}</div>`;
+  } catch(e) { r.className='result err'; r.textContent='❌ Erro de conexão.'; }
+}
+
+async function processQRManual() {
+  const qr = document.getElementById('mat-qr-input').value.trim();
+  const mat = document.getElementById('mat-input').value.trim();
+  if (!qr) return;
+  // Passa matrícula como pessoa_id — o backend pode tratar
+  await processarOperacao(qr, mat, document.getElementById('mat-result'));
+}
+
+async function processarOperacao(qrData, pessoaId, resultEl) {
+  if (!resultEl) return;
+  resultEl.style.display='block'; resultEl.className='result ok'; resultEl.textContent='⏳ Processando...';
+  try {
+    const r = await fetch('/api/qrscan',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({qr_data:qrData,pessoa_id:pessoaId||''})});
+    const d = await r.json();
+    resultEl.className = 'result ' + (d.ok ? 'ok':'err');
+    resultEl.textContent = d.msg;
+    if (d.ok) {
+      setTimeout(()=>{resultEl.style.display='none'; location.reload();},3000);
+    }
+  } catch(e) { resultEl.className='result err'; resultEl.textContent='❌ Erro de conexão.'; }
+}
+
+// SSE status
+const es = new EventSource('/api/stream_status');
+es.onmessage = e => {
+  const d = JSON.parse(e.data);
+  document.getElementById('s-alarme').style.background = d.alarme ? '#FF4C6A':'#00E5A0';
+  document.getElementById('s-porta').style.background  = d.porta  ? '#FFB800':'#00E5A0';
+};
+
+// Auto-foco QR input
+document.getElementById('qr-input').addEventListener('keydown', e => { if(e.key==='Enter') processQR(); });
+document.getElementById('mat-qr-input').addEventListener('keydown', e => { if(e.key==='Enter') processQRManual(); });
+</script>
+</body>
+</html>

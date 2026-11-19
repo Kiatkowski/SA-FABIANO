@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — luizFabiano{% endblock %}
+{% block page_title %}🏠 Dashboard{% endblock %}
+{% block topbar_actions %}
+  <a href="/notebooks/novo" class="btn btn-primary btn-sm">💻 + Notebook</a>
+  <a href="/pessoas/nova"   class="btn btn-outline btn-sm">👤 + Pessoa</a>
+  <a href="/emprestimos/novo" class="btn btn-outline btn-sm">📤 Empréstimo</a>
+{% endblock %}
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-ico kpi-ico-blue">💻</div><div><span class="kpi-val">{{ t_nb }}</span><span class="kpi-lbl">Total Notebooks</span></div></div>
+  <div class="kpi"><div class="kpi-ico kpi-ico-green">✅</div><div><span class="kpi-val" style="color:var(--success)">{{ disp }}</span><span class="kpi-lbl">Disponíveis</span></div></div>
+  <div class="kpi"><div class="kpi-ico kpi-ico-warn">📤</div><div><span class="kpi-val" style="color:var(--warn)">{{ emp }}</span><span class="kpi-lbl">Emprestados</span></div></div>
+  <div class="kpi"><div class="kpi-ico kpi-ico-purple">👥</div><div><span class="kpi-val">{{ t_p }}</span><span class="kpi-lbl">Pessoas Cadastradas</span></div></div>
+  <div class="kpi"><div class="kpi-ico kpi-ico-blue">📅</div><div><span class="kpi-val">{{ eh }}</span><span class="kpi-lbl">Retiradas Hoje</span></div></div>
+  <div class="kpi"><div class="kpi-ico kpi-ico-red">🚨</div><div><span class="kpi-val" style="color:var(--danger)">{{ al }}</span><span class="kpi-lbl">Alertas Abertos</span></div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start">
+<div>
+  <!-- Gráfico -->
+  <div class="card">
+    <div class="card-title">📊 Empréstimos — Últimos 7 dias</div>
+    <canvas id="chart" height="120"></canvas>
+  </div>
+
+  <!-- Empréstimos ativos -->
+  <div class="card">
+    <div class="card-title flex justify-between">
+      <span>📤 Empréstimos Ativos ({{ ea|length }})</span>
+      <a href="/emprestimos" style="font-size:12px;color:var(--primary)">Ver todos →</a>
+    </div>
+    {% if ea %}
+    <table class="table">
+      <thead><tr><th>Notebook</th><th>Pessoa</th><th>Turma</th><th>Retirada</th><th>Dev. Prevista</th><th></th></tr></thead>
+      <tbody>
+      {% for e in ea %}
+      <tr>
+        <td><strong style="color:var(--primary)">{{ e.patrimonio }}</strong><div style="font-size:11px;color:var(--text3)">{{ e.marca }} {{ e.modelo }}</div></td>
+        <td><div>{{ e.pessoa_nome }}</div><div style="font-size:11px;color:var(--text3)">{{ e.matricula }}</div></td>
+        <td>{{ e.turma or '—' }}</td>
+        <td style="font-size:12px;color:var(--text2)">{{ e.retirada_em[:16] }}</td>
+        <td style="font-size:12px;color:{% if e.devolucao_prevista and e.devolucao_prevista < now.strftime('%Y-%m-%d %H:%M:%S') %}var(--danger){% else %}var(--text2){% endif %}">{{ (e.devolucao_prevista or '—')[:16] }}</td>
+        <td>
+          <form method="POST" action="/emprestimos/{{ e.id }}/devolver" onsubmit="return confirm('Confirmar devolução?')">
+            <button class="btn btn-success btn-sm">📥 Devolver</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><div class="empty-ico">✅</div><p>Nenhum empréstimo ativo</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<div>
+  <!-- Alertas -->
+  {% if ar %}
+  <div class="card" style="border-color:rgba(255,76,106,.3);background:linear-gradient(135deg,var(--card),rgba(255,76,106,.05))">
+    <div class="card-title" style="color:var(--danger)">🚨 Alertas Pendentes</div>
+    {% for a in ar %}
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div class="flex justify-between items-center">
+        <span style="font-size:12px;font-weight:600;color:var(--danger)">{{ a.tipo }}</span>
+        <span style="font-size:10px;color:var(--text3)">{{ a.criado_em[:16] }}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px">{{ a.descricao }}</div>
+      {% if a.patrimonio %}<div style="font-size:11px;color:var(--text3)">📦 {{ a.patrimonio }}</div>{% endif %}
+      <div style="margin-top:7px">
+        <form method="POST" action="/alarme/{{ a.id }}/resolver" style="display:inline">
+          <button class="btn btn-sm btn-outline">✅ Resolver</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    <a href="/alarme" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:var(--primary)">Ver todos os alertas →</a>
+  </div>
+  {% endif %}
+
+  <!-- Alarme rápido -->
+  <div class="card">
+    <div class="card-title">🔴 Controle do Alarme</div>
+    <div style="text-align:center;padding:10px">
+      <div style="font-size:36px;margin-bottom:10px">{{ '🔴' if alarme_ativo else '🟢' }}</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:14px;color:{{ 'var(--danger)' if alarme_ativo else 'var(--success)' }}">
+        {{ 'ALARME ATIVO!' if alarme_ativo else 'Sistema Normal' }}
+      </div>
+      {% if alarme_ativo %}
+      <form method="POST" action="/alarme/desativar">
+        <button class="btn btn-outline" style="width:100%">🔕 Desativar Alarme</button>
+      </form>
+      {% else %}
+      <form method="POST" action="/alarme/ativar" onsubmit="return confirm('Ativar alarme manualmente?')">
+        <button class="btn btn-danger" style="width:100%">🚨 Ativar Alarme</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Logs recentes -->
+  <div class="card">
+    <div class="card-title flex justify-between">
+      <span>📝 Atividade Recente</span>
+      <a href="/logs" style="font-size:12px;color:var(--primary)">Ver todos →</a>
+    </div>
+    {% for l in lr %}
+    <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <div class="flex justify-between">
+        <span style="font-weight:500;color:var(--primary)">{{ l.tipo }}</span>
+        <span style="color:var(--text3)">{{ l.criado_em[11:16] }}</span>
+      </div>
+      <div style="color:var(--text2)">{{ l.descricao or '' }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const cd = {{ chart|safe }};
+new Chart(document.getElementById('chart'), {
+  type:'bar',
+  data:{labels:cd.map(x=>x.d),datasets:[{label:'Empréstimos',data:cd.map(x=>x.c),
+    backgroundColor:'rgba(0,212,255,.3)',borderColor:'#00D4FF',borderWidth:2,borderRadius:5}]},
+  options:{responsive:true,plugins:{legend:{display:false}},scales:{
+    x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7FA8CC',font:{size:11}}},
+    y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7FA8CC',font:{size:11}},beginAtZero:true}}}
+});
+</script>
+{% endblock %}

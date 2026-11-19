@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Novo Admin — luizFabiano{% endblock %}
+{% block page_title %}👤 Novo Administrador{% endblock %}
+{% block topbar_actions %}<a href="/admin" class="btn btn-ghost btn-sm">← Voltar</a>{% endblock %}
+{% block content %}
+<div style="max-width:500px">
+<div class="card">
+  <form method="POST">
+    <div class="fg"><label class="label">Nome *</label><input class="input" name="nome" placeholder="João Admin" required></div>
+    <div class="fg"><label class="label">Email *</label><input class="input" type="email" name="email" placeholder="admin@escola.edu.br" required></div>
+    <div class="fg"><label class="label">Senha * (mín. 8 chars)</label><input class="input" type="password" name="senha" minlength="8" required></div>
+    <div class="fg">
+      <label class="label">Nível de acesso</label>
+      <select class="select" name="nivel">
+        <option value="1">1 — Operador (visualiza e registra)</option>
+        <option value="2">2 — Admin completo</option>
+      </select>
+    </div>
+    <div class="flex gap8">
+      <button class="btn btn-primary" type="submit">✅ Criar Admin</button>
+      <a href="/admin" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Notebooks — luizFabiano{% endblock %}
+{% block page_title %}💻 Notebooks{% endblock %}
+{% block topbar_actions %}<a href="/notebooks/novo" class="btn btn-primary btn-sm">➕ Cadastrar</a>{% endblock %}
+{% block content %}
+<div class="card" style="padding:12px 14px;margin-bottom:14px">
+  <form method="GET" class="flex gap8 items-center flex-wrap">
+    <input class="input" name="q" value="{{ q }}" placeholder="🔍 Patrimônio, marca, modelo, serial..." style="flex:1;max-width:320px">
+    {% for s,l in [('','Todos'),('disponivel','Disponíveis'),('emprestado','Emprestados'),('manutencao','Manutenção')] %}
+    <a href="/notebooks?status={{ s }}&q={{ q }}" class="btn {% if status==s %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">{{ l }}</a>
+    {% endfor %}
+    <button class="btn btn-outline btn-sm" type="submit">Filtrar</button>
+  </form>
+</div>
+<div class="card">
+  <div style="color:var(--text2);font-size:13px;margin-bottom:12px">{{ notebooks|length }} notebook(s)</div>
+  {% if notebooks %}
+  <table class="table">
+    <thead><tr><th>Patrimônio</th><th>Marca/Modelo</th><th>Serial</th><th>Config.</th><th>Condição</th><th>Status</th><th>Local</th><th>Ações</th></tr></thead>
+    <tbody>
+    {% for nb in notebooks %}
+    <tr>
+      <td><strong style="color:var(--primary);font-family:monospace">{{ nb.patrimonio }}</strong></td>
+      <td><div style="font-weight:500">{{ nb.marca or '—' }}</div><div style="font-size:11px;color:var(--text3)">{{ nb.modelo or '' }}</div></td>
+      <td style="font-size:11px;font-family:monospace;color:var(--text2)">{{ nb.serial or '—' }}</td>
+      <td style="font-size:11px;color:var(--text2)">{{ nb.ram or '' }}{% if nb.ram %} RAM{% endif %}{% if nb.armazenamento %} · {{ nb.armazenamento }}{% endif %}</td>
+      <td><span class="badge badge-{{ nb.condicao }}">{{ nb.condicao }}</span></td>
+      <td><span class="badge badge-{{ nb.status }}">{{ nb.status }}</span></td>
+      <td style="font-size:12px;color:var(--text2)">{{ nb.localizacao or '—' }}</td>
+      <td>
+        <div class="flex gap4">
+          <a href="/notebooks/{{ nb.id }}" class="btn-icon" title="Ver">👁</a>
+          <a href="/notebooks/{{ nb.id }}/editar" class="btn-icon" title="Editar">✏️</a>
+          <a href="/notebooks/{{ nb.id }}/qrcode" class="btn-icon" title="QR Code">📱</a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty"><div class="empty-ico">💻</div><p>Nenhum notebook encontrado</p><a href="/notebooks/novo" class="btn btn-primary btn-sm" style="margin-top:10px">➕ Cadastrar</a></div>
+  {% endif %}
+</div>
+{% endblock %}

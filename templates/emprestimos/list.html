@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Empréstimos — luizFabiano{% endblock %}
+{% block page_title %}📋 Empréstimos{% endblock %}
+{% block topbar_actions %}<a href="/emprestimos/novo" class="btn btn-primary btn-sm">📤 Novo</a>{% endblock %}
+{% block content %}
+<div class="card" style="padding:12px 14px;margin-bottom:14px">
+  <div class="flex gap8 items-center flex-wrap">
+    {% for s,l in [('ativo','Ativos'),('devolvido','Devolvidos'),('','Todos')] %}
+    <a href="/emprestimos?status={{ s }}" class="btn {% if status==s %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">{{ l }}</a>
+    {% endfor %}
+    <span style="color:var(--text3);font-size:12px">{{ total }} registro(s)</span>
+  </div>
+</div>
+<div class="card">
+  {% if emprestimos %}
+  <table class="table">
+    <thead><tr><th>Notebook</th><th>Pessoa</th><th>Turma</th><th>Tipo</th><th>Retirada</th><th>Dev. Prevista</th><th>Dev. Real</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody>
+    {% for e in emprestimos %}
+    {% set atrasado = e.status=='ativo' and e.devolucao_prevista and e.devolucao_prevista < now.strftime('%Y-%m-%d %H:%M:%S') %}
+    <tr {% if atrasado %}style="background:rgba(255,76,106,.04)"{% endif %}>
+      <td><strong style="color:var(--primary)">{{ e.patrimonio }}</strong><div style="font-size:11px;color:var(--text3)">{{ e.marca }}</div></td>
+      <td><div>{{ e.pessoa_nome }}</div><div style="font-size:11px;color:var(--text3)">{{ e.matricula }}</div></td>
+      <td style="font-size:12px">{{ e.turma or '—' }}</td>
+      <td style="font-size:11px"><span class="badge badge-{{ 'aluno' if e.tipo=='qrcode' else 'admin' }}">{{ e.tipo }}</span></td>
+      <td style="font-size:12px;color:var(--text2)">{{ e.retirada_em[:16] }}</td>
+      <td style="font-size:12px;color:{{ 'var(--danger)' if atrasado else 'var(--text2)' }};font-weight:{{ '600' if atrasado else 'normal' }}">
+        {{ e.devolucao_prevista[:16] if e.devolucao_prevista else '—' }}
+        {% if atrasado %} ⚠️{% endif %}
+      </td>
+      <td style="font-size:12px;color:var(--text2)">{{ e.devolucao_em[:16] if e.devolucao_em else '—' }}</td>
+      <td><span class="badge badge-{{ 'atrasado' if atrasado else e.status }}">{{ 'ATRASADO' if atrasado else e.status }}</span></td>
+      <td>
+        {% if e.status=='ativo' %}
+        <form method="POST" action="/emprestimos/{{ e.id }}/devolver" onsubmit="return confirm('Confirmar devolução de {{ e.patrimonio }}?')">
+          <button class="btn btn-success btn-sm">📥 Devolver</button>
+        </form>
+        {% else %}
+        <span style="color:var(--text3);font-size:12px">—</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if pages > 1 %}
+  <div class="flex gap8 items-center" style="margin-top:14px;justify-content:center">
+    {% if page>1 %}<a href="?status={{ status }}&page={{ page-1 }}" class="btn btn-outline btn-sm">← Anterior</a>{% endif %}
+    <span style="color:var(--text2);font-size:13px">{{ page }}/{{ pages }}</span>
+    {% if page<pages %}<a href="?status={{ status }}&page={{ page+1 }}" class="btn btn-outline btn-sm">Próxima →</a>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty"><div class="empty-ico">📋</div><p>Nenhum empréstimo encontrado</p><a href="/emprestimos/novo" class="btn btn-primary btn-sm" style="margin-top:10px">📤 Registrar primeiro</a></div>
+  {% endif %}
+</div>
+{% endblock %}

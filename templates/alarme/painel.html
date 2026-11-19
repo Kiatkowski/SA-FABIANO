@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Alarme — luizFabiano{% endblock %}
+{% block page_title %}🚨 Alarme & Alertas{% endblock %}
+{% block topbar_actions %}
+  {% if alarme_ativo %}
+  <form method="POST" action="/alarme/desativar"><button class="btn btn-outline">🔕 Desativar Alarme</button></form>
+  {% else %}
+  <form method="POST" action="/alarme/ativar" onsubmit="return confirm('Ativar alarme?')"><button class="btn btn-danger">🚨 Ativar Alarme</button></form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<!-- Status Cards -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+  <div class="kpi" style="{% if alarme_ativo %}border-color:rgba(255,76,106,.4);background:rgba(255,76,106,.06){% endif %}">
+    <div class="kpi-ico {% if alarme_ativo %}kpi-ico-red{% else %}kpi-ico-green{% endif %}">{{ '🔴' if alarme_ativo else '🟢' }}</div>
+    <div><span class="kpi-val" style="font-size:16px;color:{{ 'var(--danger)' if alarme_ativo else 'var(--success)' }}">{{ 'ALARME ATIVO' if alarme_ativo else 'Sistema Normal' }}</span><span class="kpi-lbl">Status do Alarme</span></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ico {{ 'kpi-ico-warn' if porta_aberta else 'kpi-ico-green' }}">{{ '🔓' if porta_aberta else '🔒' }}</div>
+    <div><span class="kpi-val" style="font-size:16px">{{ 'Aberta' if porta_aberta else 'Fechada' }}</span><span class="kpi-lbl">Porta do Laboratório</span></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-ico kpi-ico-red">🚨</div>
+    <div><span class="kpi-val" style="color:var(--danger)">{{ alertas|selectattr('resolvido','equalto',0)|list|length }}</span><span class="kpi-lbl">Alertas Pendentes</span></div>
+  </div>
+</div>
+
+<!-- Simulador ESP32 -->
+<div class="card" style="margin-bottom:16px;border-color:rgba(182,102,255,.25)">
+  <div class="card-title" style="color:var(--purple)">🔌 Simulador de Hardware (ESP32/Arduino)</div>
+  <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Simule eventos de hardware para testar o sistema sem o dispositivo físico.</div>
+  <div class="flex gap8 flex-wrap">
+    <button class="btn btn-outline btn-sm" onclick="simPorta(true)">🔓 Simular Porta Aberta</button>
+    <button class="btn btn-outline btn-sm" onclick="simPorta(false)">🔒 Simular Porta Fechada</button>
+    <button class="btn btn-danger btn-sm" onclick="simAlarme()">🚨 Disparar Alarme (HW)</button>
+  </div>
+  <div id="sim-result" style="margin-top:10px;font-size:12px;color:var(--text2);display:none"></div>
+</div>
+
+<!-- Alertas -->
+<div class="card">
+  <div class="card-title">🚨 Histórico de Alertas</div>
+  {% if alertas %}
+  <table class="table">
+    <thead><tr><th>Tipo</th><th>Descrição</th><th>Notebook</th><th>Data/Hora</th><th>Status</th><th>Ação</th></tr></thead>
+    <tbody>
+    {% for a in alertas %}
+    <tr {% if not a.resolvido %}style="background:rgba(255,76,106,.03)"{% endif %}>
+      <td><span class="badge badge-{{ 'atrasado' if not a.resolvido else 'devolvido' }}">{{ a.tipo }}</span></td>
+      <td style="font-size:13px">{{ a.descricao }}</td>
+      <td style="font-family:monospace;color:var(--primary)">{{ a.patrimonio or '—' }}</td>
+      <td style="font-size:12px;color:var(--text2)">{{ a.criado_em[:16] }}</td>
+      <td>
+        {% if a.resolvido %}<span style="color:var(--success);font-size:13px">✅ Resolvido</span>
+        {% else %}<span style="color:var(--danger);font-size:13px">⚠️ Pendente</span>{% endif %}
+      </td>
+      <td>
+        {% if not a.resolvido %}
+        <form method="POST" action="/alarme/{{ a.id }}/resolver"><button class="btn btn-sm btn-outline">✅ Resolver</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty"><div class="empty-ico">✅</div><p>Nenhum alerta registrado</p></div>
+  {% endif %}
+</div>
+
+<!-- Instruções ESP32 -->
+<div class="card" style="border-color:rgba(0,212,255,.2)">
+  <div class="card-title">🔌 Integração com ESP32/Arduino</div>
+  <div style="font-size:13px;color:var(--text2);line-height:1.8">
+    <p style="margin-bottom:8px">Configure seu ESP32 para enviar POST para os endpoints:</p>
+    <code style="display:block;background:var(--bg);padding:10px 14px;border-radius:8px;font-size:12px;color:var(--primary);margin-bottom:8px">
+POST /api/porta<br>
+{"token":"luizfabiano-hw-token","aberta":true/false}<br><br>
+POST /api/alarme_trigger<br>
+{"token":"luizfabiano-hw-token","motivo":"Sensor ativado"}
+    </code>
+    <p>Altere o token via variável de ambiente <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">HARDWARE_TOKEN</code></p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function simPorta(aberta) {
+  const r = await fetch('/api/porta', {method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({token:'luizfabiano-hw-token',aberta})});
+  const d = await r.json();
+  const res = document.getElementById('sim-result');
+  res.style.display='block';
+  res.textContent = d.ok ? '✅ Porta ' + (aberta?'aberta':'fechada') + ' simulada!' : '❌ ' + d.msg;
+  setTimeout(()=>res.style.display='none',3000);
+}
+async function simAlarme() {
+  const r = await fetch('/api/alarme_trigger',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({token:'luizfabiano-hw-token',motivo:'Teste de hardware'})});
+  const d = await r.json();
+  showToast('🚨','Alarme disparado via simulação!','error');
+  setTimeout(()=>location.reload(),2000);
+}
+</script>
+{% endblock %}
